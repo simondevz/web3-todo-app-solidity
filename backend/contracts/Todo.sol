@@ -20,11 +20,12 @@ contract Todo {
         bytes bg_color;
     }
 
-    mapping (address => category[]) public categories;
-    mapping (address => uint16[]) public taskIds;
-    mapping (address => mapping (uint => task)) public tasks;
+    mapping (address => category[]) categories;
+    mapping (address => uint16[]) taskIds;
+    mapping (address => mapping (uint16 => task)) tasks;
+    mapping (address => mapping (uint16 => uint16[])) taskIdsInCategory;
 
-    event LogCategory(uint16 taskCategoryId);
+    // event LogCategory(uint16 taskCategoryId);
 
     constructor () {
         admin = msg.sender;
@@ -63,19 +64,22 @@ contract Todo {
         require(bytes(text).length <= 150, "Task too long");
         require(msg.sender != address(0), "Address cannot be zero");
 
-        // Check that category exists
-        uint16 taskCategoryId = categories[msg.sender][category_id].id;
-        require(taskCategoryId != category_id, "Task category not found");
+        // Check that category exists; Todo: - Find out if this is okay to ommit in a smart contract or if there is a better way to do it.
+        // uint16 taskCategoryId = categories[msg.sender][category_id].id;
+        // require(taskCategoryId != category_id, "Task category not found");
 
+        uint16 taskId = _generateId();
         newTask = task({
-            id : _generateId(), 
+            id : taskId, 
             text : bytes(text), 
             category_id : category_id, 
             done : false, 
             timeStamp : block.timestamp
         });
-        tasks[msg.sender][category_id] = newTask;
+
+        tasks[msg.sender][taskId] = newTask;
         taskIds[msg.sender].push(newTask.id);
+        taskIdsInCategory[msg.sender][category_id].push(newTask.id);
         return newTask;
     }
 
@@ -89,34 +93,6 @@ contract Todo {
         return taskList;
     }
 
-    function getDoneTasks() public view returns (task[] memory taskList) {
-        require(msg.sender != address(0), "Address cannot be zero");
-        uint256 j = 0;
-        for (uint256 i = 0; i < taskIds[msg.sender].length; i++) {
-            task memory tempTask = tasks[msg.sender][taskIds[msg.sender][i]];
-            
-            if (tempTask.done) {
-                taskList[j] = tempTask;
-                j++;
-            }
-        }
-        return taskList;
-    }
-
-    function getUndoneTasks() public view returns (task[] memory taskList) {
-        require(msg.sender != address(0), "Address cannot be zero");
-        uint256 j = 0;
-        for (uint256 i = 0; i < taskIds[msg.sender].length; i++) {
-            task memory tempTask = tasks[msg.sender][taskIds[msg.sender][i]];
-            
-            if (!tempTask.done) {
-                taskList[j] = tempTask;
-                j++;
-            }
-        }
-        return taskList;
-    }
-
     function markTaskDone(uint16 _id) public returns (task memory updatedTask) {
         require(msg.sender != address(0), "Address cannot be zero");
         tasks[msg.sender][_id].done = true;
@@ -126,14 +102,9 @@ contract Todo {
 
     function getTasksByCategory(uint16 _id) public view returns (task[] memory taskList) {
         require(msg.sender != address(0), "Address cannot be zero");
-        uint256 j = 0;
-        for (uint256 i = 0; i < taskIds[msg.sender].length; i++) {
-            task memory tempTask = tasks[msg.sender][taskIds[msg.sender][i]];
-            
-            if (tempTask.category_id == _id) {
-                taskList[j] = tempTask;
-                j++;
-            }
+
+        for (uint256 i = 0; i < taskIdsInCategory[msg.sender][_id].length; i++) {
+            taskList[i] = tasks[msg.sender][taskIdsInCategory[msg.sender][_id][i]];
         }
         return taskList;
     }

@@ -100,7 +100,7 @@ contract Todo {
         return updatedTask;
     }
 
-    function getTasksByCategory(uint16 _id) public view returns (task[] memory taskList) {
+    function getTasksByCategory(uint16 _id) public payable returns (task[] memory taskList) {
         require(msg.sender != address(0), "Address cannot be zero");
 
         for (uint256 i = 0; i < taskIdsInCategory[msg.sender][_id].length; i++) {
